@@ -1,4 +1,6 @@
-from flask import Flask
+from flask import Flask, request
+
+from functions import SQLite_db
 
 app = Flask(__name__)
 
@@ -21,7 +23,14 @@ def cart_add_page():
 
 @app.route('/user', methods = ['GET', 'POST', 'DELETE'])
 def user_page():
-    return []
+    with SQLite_db("dish.db") as db:
+        if request.method == 'POST':
+            data = request.json
+            db.insert_into('User', data)
+
+        users = db.select_from(table_name='User', columns=['*'])
+
+    return str(users)
 
 
 @app.route('/user/register', methods = ['POST'])
@@ -56,25 +65,47 @@ def user_order_page(id : int):
 
 @app.route('/user/address', methods = ['GET', 'POST'])
 def user_adress_list_page():
-    con = sqlite3.connect("dish.db")
-    new_cur = con.cursor()
-    res = new_cur.execute('SELECT * FROM Address')
-    result = res.fetchall()
-    return result
+    with SQLite_db("dish.db") as db:
+        if request.method == 'POST':
+            data = request.json
+            db.insert_into('Address', data)
+
+        address = db.select_from(table_name='Address', columns=['*'])
+
+    return str(address)
 
 @app.route('/user/address/<id>', methods = ['GET', 'POST'])
 def user_address_page(id : int):
     return []
 
 
-@app.route('/menu', methods = ['GET'])
+@app.route('/menu', methods = ['GET', 'POST'])
 def menu_page():
-    con = sqlite3.connect("dish.db")
-    new_cur = con.cursor()
-    res = new_cur.execute('SELECT * FROM Dishes')
-    result = res.fetchall()
-    return result
+    with SQLite_db('dish.db') as db:
+        if request.method == 'POST':
+            data = request.form.to_dict()
+            data['ID'] = data["Dish_name"].replace(' ', '_')
+            data['Availability'] = 1
+            db.insert_into('Dishes', data)
 
+        dishes = db.select_from('Dishes', ['*'])
+    html_form = f"""
+        <form method="POST">
+            <input type="text" name="Dish_name" placeholder="Dish_name">
+            <input type="text" name="Price" placeholder="Price">
+            <input type="text" name="Description" placeholder="Description">
+            <input type="text" name="Photo" placeholder="Photo">
+            <input type="text" name="Category" placeholder="Category">
+            <input type="text" name="Calories" placeholder="Calories">
+            <input type="text" name="Protein" placeholder="Protein">
+            <input type="text" name="Fat" placeholder="Fat">
+            <input type="text" name="Carbs" placeholder="Carbs">
+            <input type="submit">
+        </form>
+        <br>
+        {str(dishes)}
+        """
+    return html_form
 
 @app.route('/menu/<cat_name>', methods = ['GET'])
 def menu_category_page():
@@ -103,11 +134,14 @@ def admin_page():
 
 @app.route('/admin/categories', methods = ['GET', 'POST'])
 def admin_categories_page():
-    con = sqlite3.connect("dish.db")
-    new_cur = con.cursor()
-    res = new_cur.execute('SELECT * FROM Category')
-    result = res.fetchall()
-    return result
+    with SQLite_db("dish.db") as db:
+        if request.method == 'POST':
+            data = request.json
+            db.insert_into('Category', data)
+
+        categories = db.select_from(table_name='Category', columns=['*'])
+
+    return str(categories)
 
 
 @app.route('/admin/categories/<category>', methods = ['GET', 'PUT', 'DELETE'])
@@ -142,3 +176,4 @@ def adminSearchPage():
 
 if __name__ == '__main__':
     app.run()
+    
